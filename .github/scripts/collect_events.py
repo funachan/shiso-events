@@ -118,6 +118,61 @@ def parse_date_text(text: str) -> str:
         return f"{year}-{m2.group(2).zfill(2)}-{m2.group(3).zfill(2)}"
     return ""
 
+def scrape_city_shiso_json(url: str = "", base: str = "https://www.city.shiso.lg.jp") -> list:
+    """宍粟市公式カレンダーJSON API から3ヶ月分のイベントを取得"""
+    now = datetime.now(JST)
+    from_date = now.strftime("%Y-%m-01")
+    # 3ヶ月後の末日
+    end_month = now.month + 2
+    end_year  = now.year + (end_month - 1) // 12
+    end_month = (end_month - 1) % 12 + 1
+    import calendar as cal_mod
+    last_day = cal_mod.monthrange(end_year, end_month)[1]
+    to_date = f"{end_year}-{str(end_month).zfill(2)}-{last_day}"
+
+    print(f"  取得期間: {from_date} 〜 {to_date}")
+
+    api_url = "https://www.city.shiso.lg.jp/cgi-bin/get_event_calendar.php"
+    resp = requests.get(api_url, params={
+        "categoryNo": 1,
+        "fromDate": from_date,
+        "toDate": to_date,
+    }, headers={**HEADERS, "Referer": "https://www.city.shiso.lg.jp/calendar.html"}, timeout=30)
+    resp.raise_for_status()
+
+    events = []
+    seen = set()
+    for item in resp.json():
+        title   = item.get("page_name", "").strip()
+        ev_url  = item.get("url", "")
+        if not ev_url.startswith("http"):
+            ev_url = base + ev_url
+        location = (item.get("event") or {}).get("event_place", "")
+        date_list = item.get("date_list", [])
+        if not date_list:
+            continue
+        # 複数日付があれば各日付ごとに登録
+        added_dates = set()
+        for date_range in date_list:
+            date_str = date_range[0] if date_range else ""
+            if not date_str or date_str in added_dates:
+                continue
+            added_dates.add(date_str)
+            key = f"{date_str}|{title}"
+            if key in seen:
+                continue
+            seen.add(key)
+            events.append({
+                "title":       title,
+                "date":        date_str,
+                "location":    location,
+                "description": "",
+                "url":         ev_url,
+                "category":    guess_category(title),
+            })
+    return events
+
+
 def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> list:
     """宍粟市公式カレンダー https://www.city.shiso.lg.jp/calendar.html
     構造: 週グリッド形式（日〜土の7列）、各セルに日付番号＋イベントリンク
@@ -273,25 +328,20 @@ def get_shiso_calendar_urls(months_ahead: int = 3) -> list:
     return urls
 
 
-def build_shiso_sources(months_ahead: int = 3) -> list:
-    sources = []
-    urls = get_shiso_calendar_urls(months_ahead)
-    for url in urls:
-        sources.append({
-            "name":    f"宍粟市公式カレンダー",
-            "url":     url,
-            "scraper": scrape_city_shiso,
-            "base":    "https://www.city.shiso.lg.jp",
-        })
-    sources.append({
+SOURCES = [
+    {
+        "name":    "宍粟市公式カレンダー（JSON API・3ヶ月分）",
+        "url":     "",
+        "scraper": scrape_city_shiso_json,
+        "base":    "https://www.city.shiso.lg.jp",
+    },
+    {
         "name":    "宍粟市観光ナビ",
         "url":     "https://shiso-navi.jp/event/",
         "scraper": scrape_generic,
         "base":    "https://shiso-navi.jp",
-    })
-    return sources
-
-SOURCES = build_shiso_sources(months_ahead=3)
+    },
+]
 
 
 # ── メイン ──────────────────────────────────────────────────────
