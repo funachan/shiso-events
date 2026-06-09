@@ -237,21 +237,48 @@ def scrape_generic(url: str, base_url: str) -> list:
     return events
 
 
-def build_shiso_sources(months_ahead: int = 3) -> list:
-    """今月から指定月数分の宍粟市カレンダーURLを生成"""
-    sources = []
-    now = datetime.now(JST)
+def get_shiso_calendar_urls(months_ahead: int = 3) -> list:
+    """宍粟市カレンダーの「次の月」リンクを辿って複数月のURLを取得"""
+    base = "https://www.city.shiso.lg.jp"
+    url  = f"{base}/calendar.html"
+    urls = []
     for i in range(months_ahead):
-        # i ヶ月後の年月を計算
-        year  = now.year + (now.month + i - 1) // 12
-        month = (now.month + i - 1) % 12 + 1
-        # 宍粟市カレンダーは ?year=YYYY&month=MM で月切替可能
-        if i == 0:
-            url = "https://www.city.shiso.lg.jp/calendar.html"
-        else:
-            url = f"https://www.city.shiso.lg.jp/calendar.html?year={year}&month={month}"
+        urls.append(url)
+        if i < months_ahead - 1:
+            try:
+                resp = requests.get(url, timeout=20, headers=HEADERS)
+                resp.encoding = resp.apparent_encoding or "utf-8"
+                soup = BeautifulSoup(resp.text, "lxml")
+                # 「次の月」「翌月」「▶」などのリンクを探す
+                next_link = None
+                for a in soup.find_all("a", href=True):
+                    text = a.get_text(strip=True)
+                    if any(kw in text for kw in ["次の月", "翌月", "次月", "▶", "›", ">"]):
+                        next_link = a["href"]
+                        break
+                if not next_link:
+                    # rel="next" を探す
+                    tag = soup.find("a", rel="next")
+                    if tag:
+                        next_link = tag["href"]
+                if next_link:
+                    url = next_link if next_link.startswith("http") else base + next_link
+                    print(f"  次月URL: {url}")
+                else:
+                    print(f"  次月リンクが見つかりません（{i+1}ヶ月目で終了）")
+                    break
+            except Exception as e:
+                print(f"  次月URL取得エラー: {e}")
+                break
+    return urls
+
+
+def build_shiso_sources(months_ahead: int = 3) -> list:
+    sources = []
+    urls = get_shiso_calendar_urls(months_ahead)
+    for url in urls:
         sources.append({
-            "name":    f"宍粟市公式カレンダー {year}年{month}月",
+            "name":    f"宍粟市公式カレンダー",
             "url":     url,
             "scraper": scrape_city_shiso,
             "base":    "https://www.city.shiso.lg.jp",
