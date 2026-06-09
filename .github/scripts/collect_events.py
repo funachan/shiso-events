@@ -95,11 +95,9 @@ def post_event(ev: dict, term_id: int) -> dict:
         "content":        ev.get("description", ""),
         "status":         "draft",
         "event_category": [term_id],
-        "meta": {
-            "event_date":     ev.get("date", ""),
-            "event_location": ev.get("location", ""),
-            "event_url":      ev.get("url", ""),
-        },
+        "event_date":     ev.get("date", ""),
+        "event_location": ev.get("location", ""),
+        "event_url":      ev.get("url", ""),
     }
     r = requests.post(f"{API_BASE}/shiso_event", json=payload, auth=AUTH, timeout=30)
     r.raise_for_status()
