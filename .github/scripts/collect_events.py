@@ -151,11 +151,14 @@ def scrape_city_shiso_json(url: str = "", base: str = "https://www.city.shiso.lg
         date_list = item.get("date_list", [])
         if not date_list:
             continue
-        # 複数日付があれば各日付ごとに登録
+        # 複数日付があれば各日付ごとに登録（取得期間内のみ）
         added_dates = set()
         for date_range in date_list:
             date_str = date_range[0] if date_range else ""
             if not date_str or date_str in added_dates:
+                continue
+            # 期間外は除外
+            if date_str < from_date or date_str > to_date:
                 continue
             added_dates.add(date_str)
             key = f"{date_str}|{title}"
