@@ -144,6 +144,12 @@ def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> l
             page_month = int(m2.group(2))
     print(f"  対象年月: {page_year}年{page_month}月")
 
+    # デバッグ：最初の5つのtdの内容を表示
+    all_tds = soup.select("table td")
+    print(f"  td総数: {len(all_tds)}")
+    for i, td in enumerate(all_tds[:5]):
+        print(f"  td[{i}] class={td.get('class')} text={repr(td.get_text(separator='|', strip=True)[:80])}")
+
     seen = set()
 
     # 週グリッド形式：各 td がひとつの日を表す
