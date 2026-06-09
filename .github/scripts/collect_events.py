@@ -121,78 +121,78 @@ def parse_date_text(text: str) -> str:
     return ""
 
 def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> list:
-    """宍粟市公式カレンダー https://www.city.shiso.lg.jp/calendar.html"""
+    """宍粟市公式カレンダー https://www.city.shiso.lg.jp/calendar.html
+    構造: <table> の各 <tr> に 日付(td) | 曜日(td) | イベント名リンク(td>a) の3列
+    """
     resp = requests.get(url, timeout=30, headers=HEADERS)
     resp.encoding = resp.apparent_encoding or "utf-8"
     soup = BeautifulSoup(resp.text, "lxml")
     events = []
 
-    # カレンダーページの各イベント行を探す（複数セレクタを試す）
-    rows = (
-        soup.select("table.calendar td") or
-        soup.select(".event-list li") or
-        soup.select(".schedule-list li") or
-        soup.select("dl.event dt") or
-        soup.select(".cal-event") or
-        soup.select("li.event") or
-        soup.select(".eventlist-item") or
-        soup.select("article")
-    )
+    # ページのタイトルから年月を取得（例：「令和7年6月」）
+    page_year  = datetime.now(JST).year
+    page_month = datetime.now(JST).month
+    title_el = soup.select_one("h1, h2, .calender-title, #contents h2")
+    if title_el:
+        m = re.search(r"令和(\d+)年(\d+)月", title_el.get_text())
+        if m:
+            page_year  = 2018 + int(m.group(1))
+            page_month = int(m.group(2))
+        m2 = re.search(r"(\d{4})年(\d+)月", title_el.get_text())
+        if m2:
+            page_year  = int(m2.group(1))
+            page_month = int(m2.group(2))
 
-    if not rows:
-        # テーブル形式でない場合はリンク一覧から取得
-        links = soup.select("a[href]")
-        for a in links:
-            text = a.get_text(strip=True)
-            if len(text) < 5 or len(text) > 100:
-                continue
-            href = a.get("href", "")
-            if not any(kw in href for kw in ["event", "calendar", "news", "jouhou"]):
-                continue
-            date_text = ""
-            parent = a.find_parent()
-            if parent:
-                date_text = parse_date_text(parent.get_text())
-            full_url = href if href.startswith("http") else "https://www.city.shiso.lg.jp" + href
-            events.append({
-                "title":       text,
-                "date":        date_text,
-                "location":    "",
-                "description": "",
-                "url":         full_url,
-                "category":    guess_category(text),
-            })
-        return events
+    seen = set()
 
-    for row in rows:
+    for tr in soup.select("table tr"):
+        tds = tr.find_all("td")
+        if len(tds) < 3:
+            continue
         try:
-            title_el = row.select_one("a, .title, dt, h3, h4") or row
-            title = title_el.get_text(strip=True)
-            if not title or len(title) < 3:
+            day_text = tds[0].get_text(strip=True)
+            if not day_text.isdigit():
+                continue
+            day = int(day_text)
+            date_str = f"{page_year}-{str(page_month).zfill(2)}-{str(day).zfill(2)}"
+
+            # イベントリンクをすべて取得（複数イベントが同じ行にある場合も対応）
+            links = tds[2].find_all("a") if len(tds) > 2 else []
+            if not links:
+                # リンクなしのテキストイベント
+                text = tds[2].get_text(strip=True)
+                if text and len(text) > 3:
+                    key = f"{date_str}|{text}"
+                    if key not in seen:
+                        seen.add(key)
+                        events.append({
+                            "title":       text,
+                            "date":        date_str,
+                            "location":    "",
+                            "description": "",
+                            "url":         "",
+                            "category":    guess_category(text),
+                        })
                 continue
 
-            date_str = parse_date_text(row.get_text())
-
-            loc_el = row.select_one(".place, .location, .venue")
-            location = loc_el.get_text(strip=True) if loc_el else ""
-
-            desc_el = row.select_one("p, .desc, dd")
-            desc = desc_el.get_text(strip=True)[:200] if desc_el else ""
-
-            link_el = row.select_one("a[href]")
-            ev_url = ""
-            if link_el:
-                href = link_el.get("href", "")
-                ev_url = href if href.startswith("http") else "https://www.city.shiso.lg.jp" + href
-
-            events.append({
-                "title":       title,
-                "date":        date_str,
-                "location":    location,
-                "description": desc,
-                "url":         ev_url,
-                "category":    guess_category(title, desc),
-            })
+            for a in links:
+                title = a.get_text(strip=True)
+                if not title or len(title) < 3:
+                    continue
+                key = f"{date_str}|{title}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                href = a.get("href", "")
+                ev_url = href if href.startswith("http") else base + href
+                events.append({
+                    "title":       title,
+                    "date":        date_str,
+                    "location":    "",
+                    "description": "",
+                    "url":         ev_url,
+                    "category":    guess_category(title),
+                })
         except Exception as e:
             print(f"  行スキップ: {e}", file=sys.stderr)
 
