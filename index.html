@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宍粟市 地域イベントカレンダー</title>
+<style>
+  :root {
+    --navy:  #1a306a;
+    --green: #2d4a2d;
+    --sky:   #5a8fa8;
+    --stone: #8b7355;
+    --yellow:#f0eb45;
+    --cream: #faf8f3;
+    --white: #ffffff;
+    --text:  #333333;
+    --muted: #666666;
+    --radius: 10px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ── ヘッダー ── */
+  .page-header {
+    background: linear-gradient(135deg, #1a3a5c 0%, var(--sky) 60%, #3a7a6a 100%);
+    padding: 40px 24px 32px;
+    text-align: center;
+    color: var(--white);
+  }
+
+  .page-header h1 {
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    font-size: 13px;
+    opacity: 0.8;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── メインラップ ── */
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+  }
+
+  /* ── フィルター ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .filter-btn {
+    padding: 6px 16px;
+    border: 2px solid var(--navy);
+    background: transparent;
+    color: var(--navy);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+    font-family: inherit;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--navy);
+    color: var(--white);
+  }
+
+  /* カテゴリ色 */
+  .cat-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+
+  /* ── ビュー切替 ── */
+  .view-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .view-btn {
+    padding: 7px 18px;
+    border: 1px solid #ddd;
+    background: var(--white);
+    color: var(--muted);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: inherit;
+  }
+
+  .view-btn.active {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+  }
+
+  /* ── カレンダー ── */
+  .cal {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--navy);
+    color: var(--white);
+    padding: 14px 20px;
+  }
+
+  .cal-nav h2 { font-size: 18px; font-weight: bold; }
+
+  .cal-nav button {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 26px;
+    cursor: pointer;
+    padding: 0 10px;
+    opacity: .8;
+    line-height: 1;
+    font-family: inherit;
+  }
+
+  .cal-nav button:hover { opacity: 1; }
+
+  .cal-head {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    background: #f0f0f0;
+  }
+
+  .cal-head span {
+    text-align: center;
+    padding: 7px 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--muted);
+  }
+
+  .cal-head span:first-child { color: #d44; }
+  .cal-head span:last-child  { color: var(--sky); }
+
+  .cal-body {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    border-left: 1px solid #eee;
+    border-top: 1px solid #eee;
+  }
+
+  .cal-cell {
+    min-height: 80px;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 5px;
+  }
+
+  .cal-cell.blank { background: #fafafa; }
+
+  .cal-cell.today .day-num {
+    background: var(--yellow);
+    color: var(--navy);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .day-num {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .cal-body .cal-cell:nth-child(7n+1) .day-num { color: #d44; }
+  .cal-body .cal-cell:nth-child(7n)   .day-num { color: var(--sky); }
+
+  .ev-chip {
+    display: block;
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-top: 2px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--white);
+    background: var(--navy);
+    transition: opacity .2s;
+  }
+
+  .ev-chip:hover { opacity: .8; }
+
+  /* ── リストビュー ── */
+  .ev-list { display: none; margin-bottom: 32px; }
+  .ev-list.show { display: block; }
+  .ev-list-empty { text-align:center; color:var(--muted); padding:40px 0; }
+
+  .ev-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+    gap: 20px;
+  }
+
+  .ev-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    cursor: pointer;
+  }
+
+  .ev-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+
+  .ev-card-body { padding: 16px 18px 20px; }
+
+  .ev-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--stone);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .ev-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--navy);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .ev-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ev-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn-detail {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    border-bottom: 1px solid var(--navy);
+  }
+
+  .btn-apply {
+    font-size: 12px;
+    font-weight: bold;
+    background: var(--yellow);
+    color: var(--navy);
+    padding: 4px 14px;
+    border-radius: 999px;
+  }
+
+  /* ── ポップアップ ── */
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .popup-overlay.show { display: flex; }
+
+  .popup {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 28px;
+    max-width: 420px;
+    width: 100%;
+    position: relative;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,.2);
+  }
+
+  .popup-close {
+    position: absolute;
+    top: 12px; right: 16px;
+    background: none; border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: inherit;
+  }
+
+  .popup h3 {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--navy);
+    margin-bottom: 12px;
+    padding-right: 24px;
+  }
+
+  .popup-meta {
+    font-size: 13px;
+    color: var(--stone);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .popup-desc {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.8;
+    margin: 14px 0;
+    border-top: 1px solid #eee;
+    padding-top: 14px;
+  }
+
+  .popup-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+  .btn-primary {
+    padding: 9px 22px;
+    background: var(--navy);
+    color: var(--white);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+
+  .btn-yellow {
+    padding: 9px 22px;
+    background: var(--yellow);
+    color: var(--navy);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+
+  /* ── 投稿促進 ── */
+  .submit-box {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 2px dashed #ddd;
+    padding: 28px;
+    text-align: center;
+    margin-top: 32px;
+  }
+
+  .submit-box p { font-size: 15px; font-weight: bold; color: var(--navy); margin-bottom: 6px; }
+  .submit-box small { font-size: 13px; color: var(--muted); display:block; margin-bottom: 16px; }
+
+  .btn-submit {
+    display: inline-block;
+    padding: 10px 28px;
+    background: var(--navy);
+    color: var(--white);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  /* ── フッター ── */
+  .page-footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid #eee;
+  }
+
+  .page-footer a { color: var(--sky); text-decoration: underline; }
+
+  @media (max-width:600px) {
+    .cal-cell { min-height: 54px; }
+    .ev-chip  { font-size: 8px; }
+    .cal-nav h2 { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>🗓 宍粟市 地域イベントカレンダー</h1>
+  <p>船元りょうこ 情報提供 ｜ <a href="https://ryoko-funamoto.jp/" style="text-decoration:underline;opacity:.8;">公式サイトへ</a></p>
+</header>
+
+<div class="wrap">
+
+  <!-- フィルター -->
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-btn active" data-cat="all">すべて</button>
+  </div>
+
+  <!-- ビュー切替 -->
+  <div class="view-toggle">
+    <button class="view-btn active" data-view="calendar">📅 カレンダー</button>
+    <button class="view-btn" data-view="list">📋 リスト</button>
+  </div>
+
+  <!-- カレンダー -->
+  <div class="cal" id="calView">
+    <div class="cal-nav">
+      <button id="prevBtn">‹</button>
+      <h2 id="calTitle"></h2>
+      <button id="nextBtn">›</button>
+    </div>
+    <div class="cal-head">
+      <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+    </div>
+    <div class="cal-body" id="calBody"></div>
+  </div>
+
+  <!-- リスト -->
+  <div class="ev-list" id="listView">
+    <div class="ev-cards" id="listCards"></div>
+  </div>
+
+  <!-- ポップアップ -->
+  <div class="popup-overlay" id="popup">
+    <div class="popup">
+      <button class="popup-close" id="popupClose">✕</button>
+      <div id="popupBody"></div>
+    </div>
+  </div>
+
+  <!-- 投稿促進 -->
+  <div class="submit-box">
+    <p>🎉 地域のイベント情報をシェアしませんか？</p>
+    <small>宍粟市内のイベントを知っている方はSNSでお知らせください！</small>
+    <a class="btn-submit" href="https://ryoko-funamoto.jp/" target="_blank">船元りょうこ 公式サイトへ</a>
+  </div>
+
+</div><!-- /.wrap -->
+
+<footer class="page-footer">
+  <p>© 2026 船元りょうこ ｜ データソース：
+    <a href="https://www.shiso.lg.jp/" target="_blank" rel="noopener">宍粟市公式サイト</a> ほか
+  </p>
+</footer>
+
+<script>
+(function () {
+  var EVENTS = [];
+  var filtered = [];
+  var curYear, curMonth;
+  var curFilter = 'all';
+  var curView   = 'calendar';
+
+  var CAT_COLORS = {
+    'お祭り':  '#c0392b',
+    'マルシェ':'#27ae60',
+    '講座':    '#8e44ad',
+    'スポーツ':'#2980b9',
+    '文化':    '#d35400',
+    'その他':  '#7f8c8d'
+  };
+
+  function catColor(cat) {
+    return CAT_COLORS[cat] || '#1a306a';
+  }
+
+  function fmtDate(ev) {
+    if (!ev.date) return '';
+    var d = new Date(ev.date);
+    var wd = ['日','月','火','水','木','金','土'];
+    var s = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日（' + wd[d.getDay()] + '）';
+    if (ev.time) s += ' ' + ev.time;
+    if (ev.end_time) s += '〜' + ev.end_time;
+    return s;
+  }
+
+  /* ── フィルター ── */
+  function getFiltered() {
+    var evs = EVENTS.filter(function(e){ return e.status === 'approved'; });
+    if (curFilter === 'all') return evs;
+    return evs.filter(function(e){ return e.category === curFilter; });
+  }
+
+  /* ── カレンダー描画 ── */
+  function renderCal() {
+    var title = document.getElementById('calTitle');
+    var body  = document.getElementById('calBody');
+    title.textContent = curYear + '年 ' + (curMonth+1) + '月';
+    body.innerHTML = '';
+
+    var first   = new Date(curYear, curMonth, 1).getDay();
+    var lastDay = new Date(curYear, curMonth+1, 0).getDate();
+    var today   = new Date();
+    var evs     = getFiltered();
+
+    for (var i = 0; i < first; i++) {
+      var b = document.createElement('div');
+      b.className = 'cal-cell blank';
+      body.appendChild(b);
+    }
+
+    for (var d = 1; d <= lastDay; d++) {
+      var dateStr = curYear + '-' +
+                    String(curMonth+1).padStart(2,'0') + '-' +
+                    String(d).padStart(2,'0');
+      var isToday = today.getFullYear()===curYear && today.getMonth()===curMonth && today.getDate()===d;
+      var dayEvs  = evs.filter(function(e){ return e.date === dateStr; });
+
+      var cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isToday ? ' today' : '');
+
+      var num = document.createElement('span');
+      num.className = 'day-num';
+      num.textContent = d;
+      cell.appendChild(num);
+
+      dayEvs.forEach(function(ev) {
+        var chip = document.createElement('span');
+        chip.className = 'ev-chip';
+        chip.textContent = ev.title;
+        chip.style.background = catColor(ev.category);
+        chip.addEventListener('click', function(){ showPopup(ev); });
+        cell.appendChild(chip);
+      });
+
+      body.appendChild(cell);
+    }
+  }
+
+  /* ── リスト描画 ── */
+  function renderList() {
+    var cards = document.getElementById('listCards');
+    var evs = getFiltered().filter(function(e){ return e.date; })
+                .sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+    if (!evs.length) {
+      cards.innerHTML = '<p class="ev-list-empty">現在予定されているイベントはありません</p>';
+      return;
+    }
+
+    cards.innerHTML = '';
+    evs.forEach(function(ev) {
+      var card = document.createElement('div');
+      card.className = 'ev-card';
+      card.innerHTML =
+        '<div class="ev-card-body">' +
+        '<span class="cat-tag" style="background:' + catColor(ev.category) + ';color:#fff;">' + (ev.category||'イベント') + '</span>' +
+        '<div class="ev-meta">📅 ' + fmtDate(ev) + '</div>' +
+        (ev.location ? '<div class="ev-meta">📍 ' + ev.location + '</div>' : '') +
+        '<p class="ev-title">' + ev.title + '</p>' +
+        (ev.description ? '<p class="ev-desc">' + ev.description + '</p>' : '') +
+        '<div class="ev-actions">' +
+        '<span class="btn-detail" onclick="">詳細を見る</span>' +
+        (ev.url ? '<a class="btn-apply" href="' + ev.url + '" target="_blank" rel="noopener">申し込む →</a>' : '') +
+        '</div></div>';
+      card.addEventListener('click', function(){ showPopup(ev); });
+      cards.appendChild(card);
+    });
+  }
+
+  /* ── ポップアップ ── */
+  function showPopup(ev) {
+    var popup = document.getElementById('popup');
+    var body  = document.getElementById('popupBody');
+
+    body.innerHTML =
+      '<span class="cat-tag" style="background:' + catColor(ev.category) + ';color:#fff;margin-bottom:10px;">' + (ev.category||'イベント') + '</span>' +
+      '<h3>' + ev.title + '</h3>' +
+      (ev.date    ? '<p class="popup-meta">📅 ' + fmtDate(ev) + '</p>' : '') +
+      (ev.location? '<p class="popup-meta">📍 ' + ev.location + '</p>' : '') +
+      (ev.description ? '<p class="popup-desc">' + ev.description + '</p>' : '') +
+      '<div class="popup-btns">' +
+      (ev.url ? '<a class="btn-yellow" href="' + ev.url + '" target="_blank" rel="noopener">申し込む →</a>' : '') +
+      '</div>';
+
+    popup.classList.add('show');
+  }
+
+  document.getElementById('popupClose').addEventListener('click', function(){
+    document.getElementById('popup').classList.remove('show');
+  });
+  document.getElementById('popup').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+  });
+
+  /* ── ナビ ── */
+  document.getElementById('prevBtn').addEventListener('click', function(){
+    curMonth--;
+    if (curMonth < 0) { curMonth = 11; curYear--; }
+    renderCal();
+  });
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    curMonth++;
+    if (curMonth > 11) { curMonth = 0; curYear++; }
+    renderCal();
+  });
+
+  /* ── ビュー切替 ── */
+  document.querySelectorAll('.view-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.view-btn').forEach(function(b){ b.classList.remove('active'); });
+      this.classList.add('active');
+      curView = this.dataset.view;
+      document.getElementById('calView').style.display  = curView==='calendar' ? 'block' : 'none';
+      document.getElementById('listView').classList.toggle('show', curView==='list');
+      if (curView==='list') renderList();
+    });
+  });
+
+  /* ── カテゴリフィルター生成 ── */
+  function buildFilters() {
+    var bar  = document.getElementById('filterBar');
+    var cats = [];
+    EVENTS.forEach(function(e){
+      if (e.category && cats.indexOf(e.category) === -1) cats.push(e.category);
+    });
+    cats.forEach(function(cat){
+      var btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.dataset.cat = cat;
+      btn.textContent = cat;
+      btn.style.borderColor = catColor(cat);
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); b.style.background=''; b.style.color=''; });
+        this.classList.add('active');
+        this.style.background = catColor(cat);
+        this.style.color = '#fff';
+        curFilter = cat;
+        if (curView==='calendar') renderCal(); else renderList();
+      });
+      bar.appendChild(btn);
+    });
+
+    /* 「すべて」ボタンのイベント */
+    bar.querySelector('[data-cat="all"]').addEventListener('click', function(){
+      document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); b.style.background=''; b.style.color=''; });
+      this.classList.add('active');
+      curFilter = 'all';
+      if (curView==='calendar') renderCal(); else renderList();
+    });
+  }
+
+  /* ── 初期化：JSONフェッチ ── */
+  var now = new Date();
+  curYear  = now.getFullYear();
+  curMonth = now.getMonth();
+
+  fetch('./data/events.json?v=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      EVENTS = data;
+      buildFilters();
+      renderCal();
+    })
+    .catch(function(){
+      document.getElementById('calBody').innerHTML =
+        '<p style="grid-column:1/-1;padding:24px;text-align:center;color:#888;">データを読み込めませんでした</p>';
+    });
+})();
+</script>
+</body>
+</html>

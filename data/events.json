@@ -1,0 +1,28 @@
+[
+  {
+    "id": "2026-sample-001",
+    "title": "サンプル：山崎マルシェ",
+    "date": "2026-07-06",
+    "time": "10:00",
+    "end_time": "15:00",
+    "location": "山崎文化会館前広場",
+    "category": "マルシェ",
+    "description": "地元の農産物や手作り品が集まるマルシェです。ぜひ遊びに来てください！",
+    "url": "",
+    "source": "manual",
+    "status": "approved"
+  },
+  {
+    "id": "2026-sample-002",
+    "title": "サンプル：波賀こども祭り",
+    "date": "2026-07-20",
+    "time": "09:00",
+    "end_time": "16:00",
+    "location": "波賀町総合支所周辺",
+    "category": "お祭り",
+    "description": "子どもたちが楽しめるゲームや屋台が並びます。家族みんなでどうぞ。",
+    "url": "",
+    "source": "manual",
+    "status": "approved"
+  }
+]

@@ -1,0 +1,29 @@
+name: イベント自動収集
+
+on:
+  schedule:
+    - cron: '0 22 * * 0'   # 毎週日曜 22:00 UTC = 月曜 7:00 JST
+  workflow_dispatch:         # Actions タブから手動実行も可能
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 依存パッケージインストール
+        run: pip install requests beautifulsoup4 lxml
+
+      - name: イベント収集・WordPress投稿
+        env:
+          WP_URL:      ${{ secrets.WP_URL }}           # https://ryoko-funamoto.jp
+          WP_USER:     ${{ secrets.WP_USER }}           # WordPressユーザー名
+          WP_APP_PASS: ${{ secrets.WP_APP_PASS }}       # アプリケーションパスワード
+        run: python .github/scripts/collect_events.py
