@@ -120,7 +120,7 @@ def parse_date_text(text: str) -> str:
         return f"{year}-{m2.group(2).zfill(2)}-{m2.group(3).zfill(2)}"
     return ""
 
-def scrape_city_shiso(url: str) -> list:
+def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> list:
     """宍粟市公式カレンダー https://www.city.shiso.lg.jp/calendar.html"""
     resp = requests.get(url, timeout=30, headers=HEADERS)
     resp.encoding = resp.apparent_encoding or "utf-8"
@@ -239,10 +239,10 @@ SOURCES = [
         "base":    "https://www.city.shiso.lg.jp",
     },
     {
-        "name":    "宍粟市観光協会",
-        "url":     "https://www.shiso-kanko.jp/event/",
+        "name":    "宍粟市観光ナビ",
+        "url":     "https://shiso-navi.jp/event/",
         "scraper": scrape_generic,
-        "base":    "https://www.shiso-kanko.jp",
+        "base":    "https://shiso-navi.jp",
     },
 ]
 
