@@ -122,88 +122,85 @@ def parse_date_text(text: str) -> str:
 
 def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> list:
     """宍粟市公式カレンダー https://www.city.shiso.lg.jp/calendar.html
-    構造: <table> の各 <tr> に 日付(td) | 曜日(td) | イベント名リンク(td>a) の3列
+    構造: 週グリッド形式（日〜土の7列）、各セルに日付番号＋イベントリンク
     """
     resp = requests.get(url, timeout=30, headers=HEADERS)
     resp.encoding = resp.apparent_encoding or "utf-8"
     soup = BeautifulSoup(resp.text, "lxml")
     events = []
 
-    # ページのタイトルから年月を取得（例：「令和7年6月」）
+    # ページ全体のテキストから年月を取得
     page_year  = datetime.now(JST).year
     page_month = datetime.now(JST).month
-    title_el = soup.select_one("h1, h2, .calender-title, #contents h2")
-    if title_el:
-        m = re.search(r"令和(\d+)年(\d+)月", title_el.get_text())
-        if m:
-            page_year  = 2018 + int(m.group(1))
-            page_month = int(m.group(2))
-        m2 = re.search(r"(\d{4})年(\d+)月", title_el.get_text())
+    full_text = soup.get_text()
+    m = re.search(r"令和(\d+)年(\d+)月", full_text)
+    if m:
+        page_year  = 2018 + int(m.group(1))
+        page_month = int(m.group(2))
+    else:
+        m2 = re.search(r"(\d{4})年(\d+)月", full_text)
         if m2:
             page_year  = int(m2.group(1))
             page_month = int(m2.group(2))
-
-    # デバッグ：ページの構造を確認
-    all_tables = soup.select("table")
-    print(f"  テーブル数: {len(all_tables)}")
-    all_trs = soup.select("table tr")
-    print(f"  行数: {len(all_trs)}")
-    if all_trs:
-        first_tr = all_trs[0]
-        print(f"  最初の行のHTML: {str(first_tr)[:200]}")
+    print(f"  対象年月: {page_year}年{page_month}月")
 
     seen = set()
 
-    for tr in soup.select("table tr"):
-        tds = tr.find_all("td")
-        if len(tds) < 3:
-            continue
+    # 週グリッド形式：各 td がひとつの日を表す
+    for td in soup.select("table td"):
         try:
-            day_text = tds[0].get_text(strip=True)
-            if not day_text.isdigit():
+            td_text = td.get_text(separator="\n", strip=True)
+
+            # セル内の最初の数字が日付
+            day_match = re.match(r"^(\d{1,2})", td_text)
+            if not day_match:
                 continue
-            day = int(day_text)
+            day = int(day_match.group(1))
+            if not 1 <= day <= 31:
+                continue
             date_str = f"{page_year}-{str(page_month).zfill(2)}-{str(day).zfill(2)}"
 
-            # イベントリンクをすべて取得（複数イベントが同じ行にある場合も対応）
-            links = tds[2].find_all("a") if len(tds) > 2 else []
-            if not links:
-                # リンクなしのテキストイベント
-                text = tds[2].get_text(strip=True)
-                if text and len(text) > 3:
-                    key = f"{date_str}|{text}"
-                    if key not in seen:
-                        seen.add(key)
-                        events.append({
-                            "title":       text,
-                            "date":        date_str,
-                            "location":    "",
-                            "description": "",
-                            "url":         "",
-                            "category":    guess_category(text),
-                        })
-                continue
-
-            for a in links:
-                title = a.get_text(strip=True)
-                if not title or len(title) < 3:
-                    continue
-                key = f"{date_str}|{title}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                href = a.get("href", "")
-                ev_url = href if href.startswith("http") else base + href
-                events.append({
-                    "title":       title,
-                    "date":        date_str,
-                    "location":    "",
-                    "description": "",
-                    "url":         ev_url,
-                    "category":    guess_category(title),
-                })
+            # セル内のリンクをすべて取得
+            links = td.find_all("a")
+            if links:
+                for a in links:
+                    title = a.get_text(strip=True)
+                    if not title or len(title) < 3:
+                        continue
+                    key = f"{date_str}|{title}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    href = a.get("href", "")
+                    ev_url = href if href.startswith("http") else base + href
+                    events.append({
+                        "title":       title,
+                        "date":        date_str,
+                        "location":    "",
+                        "description": "",
+                        "url":         ev_url,
+                        "category":    guess_category(title),
+                    })
+            else:
+                # リンクなし・テキストのみのイベント（日付番号を除いたテキスト）
+                lines = [l for l in td_text.split("\n") if l and not l.isdigit()]
+                for line in lines:
+                    if len(line) < 4:
+                        continue
+                    key = f"{date_str}|{line}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    events.append({
+                        "title":       line,
+                        "date":        date_str,
+                        "location":    "",
+                        "description": "",
+                        "url":         "",
+                        "category":    guess_category(line),
+                    })
         except Exception as e:
-            print(f"  行スキップ: {e}", file=sys.stderr)
+            print(f"  セルスキップ: {e}", file=sys.stderr)
 
     return events
 
