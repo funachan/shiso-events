@@ -237,20 +237,34 @@ def scrape_generic(url: str, base_url: str) -> list:
     return events
 
 
-SOURCES = [
-    {
-        "name":    "宍粟市公式カレンダー",
-        "url":     "https://www.city.shiso.lg.jp/calendar.html",
-        "scraper": scrape_city_shiso,
-        "base":    "https://www.city.shiso.lg.jp",
-    },
-    {
+def build_shiso_sources(months_ahead: int = 3) -> list:
+    """今月から指定月数分の宍粟市カレンダーURLを生成"""
+    sources = []
+    now = datetime.now(JST)
+    for i in range(months_ahead):
+        # i ヶ月後の年月を計算
+        year  = now.year + (now.month + i - 1) // 12
+        month = (now.month + i - 1) % 12 + 1
+        # 宍粟市カレンダーは ?year=YYYY&month=MM で月切替可能
+        if i == 0:
+            url = "https://www.city.shiso.lg.jp/calendar.html"
+        else:
+            url = f"https://www.city.shiso.lg.jp/calendar.html?year={year}&month={month}"
+        sources.append({
+            "name":    f"宍粟市公式カレンダー {year}年{month}月",
+            "url":     url,
+            "scraper": scrape_city_shiso,
+            "base":    "https://www.city.shiso.lg.jp",
+        })
+    sources.append({
         "name":    "宍粟市観光ナビ",
         "url":     "https://shiso-navi.jp/event/",
         "scraper": scrape_generic,
         "base":    "https://shiso-navi.jp",
-    },
-]
+    })
+    return sources
+
+SOURCES = build_shiso_sources(months_ahead=3)
 
 
 # ── メイン ──────────────────────────────────────────────────────
