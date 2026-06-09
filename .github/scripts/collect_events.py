@@ -143,6 +143,15 @@ def scrape_city_shiso(url: str, base: str = "https://www.city.shiso.lg.jp") -> l
             page_year  = int(m2.group(1))
             page_month = int(m2.group(2))
 
+    # デバッグ：ページの構造を確認
+    all_tables = soup.select("table")
+    print(f"  テーブル数: {len(all_tables)}")
+    all_trs = soup.select("table tr")
+    print(f"  行数: {len(all_trs)}")
+    if all_trs:
+        first_tr = all_trs[0]
+        print(f"  最初の行のHTML: {str(first_tr)[:200]}")
+
     seen = set()
 
     for tr in soup.select("table tr"):
