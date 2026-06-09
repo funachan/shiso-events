@@ -68,7 +68,7 @@ def get_existing_keys() -> set:
                 break
             for item in items:
                 title = item.get("title", {}).get("rendered", "")
-                date  = (item.get("meta") or {}).get("_event_date", "")[:10]
+                date  = (item.get("meta") or {}).get("event_date", "")[:10]
                 keys.add(make_key(title, date))
             page += 1
         except Exception as e:
@@ -96,9 +96,9 @@ def post_event(ev: dict, term_id: int) -> dict:
         "status":         "draft",
         "event_category": [term_id],
         "meta": {
-            "_event_date":     ev.get("date", ""),
-            "_event_location": ev.get("location", ""),
-            "_event_url":      ev.get("url", ""),
+            "event_date":     ev.get("date", ""),
+            "event_location": ev.get("location", ""),
+            "event_url":      ev.get("url", ""),
         },
     }
     r = requests.post(f"{API_BASE}/shiso_event", json=payload, auth=AUTH, timeout=30)
